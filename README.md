@@ -1,121 +1,119 @@
-# **Complete ST7789V LCD Tutorial for Arduino**
+**Component tutorial** for 1.14" IPS LCD (ST7789V driver), including full pin descriptions, initialization, and practical examples:
 
-## **1. Library Functions Deep Dive**
+---
 
-### **Initialization Parameters**
+# **Complete ST7789V LCD Module Guide**
+
+## **1. Module Specifications**
+| Parameter          | Value               |
+|--------------------|---------------------|
+| Display Type       | IPS LCD             |
+| Resolution         | 135x240 pixels      |
+| Driver IC          | ST7789V             |
+| Interface          | 4-wire SPI          |
+| Viewing Angles     | 170° horizontal/vertical |
+| Power Supply       | 3.3V-5V            |
+| Backlight          | LED (PWM controllable) |
+
+## **2. Pinout Description**
+### **Full Pin Functions**
+| Pin Label | Pin Type | Description                  | Arduino Connection |
+|-----------|----------|------------------------------|--------------------|
+| **VCC**   | Power    | 3.3V-5V power input          | 3.3V or 5V         |
+| **GND**   | Ground   | Common ground                | GND                |
+| **SCL**   | Input    | SPI clock signal             | D13 (SCK)          |
+| **SDA**   | I/O      | SPI data input/output        | D11 (MOSI)         |
+| **RES**   | Input    | Reset (active low)           | D8 (or tie to VCC) |
+| **DC**    | Input    | Data/Command selector        | D9                 |
+| **CS**    | Input    | Chip Select (active low)     | D10                |
+| **BLK**   | Input    | Backlight control (PWM)      | D3 (PWM capable)   |
+
+### **Critical Pin Details**
+- **RES (Reset)**: Minimum 10μs low pulse required for hardware reset
+- **DC (Data/Command)**:
+  - HIGH = Data mode (pixel/color data)
+  - LOW = Command mode (register configuration)
+- **BLK (Backlight)**:
+  - 3.3V = Maximum brightness
+  - PWM = Adjustable brightness (0-255)
+  - GND = Backlight off (screen still active)
+
+## **3. Electrical Characteristics**
+| Parameter          | Min | Typical | Max | Unit |
+|--------------------|-----|---------|-----|------|
+| Operating Voltage | 3.0 | 3.3     | 5.5 | V    |
+| Current (Display) | 15  | 25      | 40  | mA   |
+| Current (Backlight)| 20  | 30      | 50  | mA   |
+| SPI Clock Speed   | -   | 40      | 80  | MHz  |
+
+## **4. Initialization Sequence**
+### **Hardware Initialization**
+1. Power up sequence:
+   - Apply VCC (3.3V)
+   - Hold RES low for 10μs, then high
+   - Wait 120ms before sending commands
+
+2. Software initialization:
 ```cpp
-tft.init(width, height, spiMode, frequency);
+Adafruit_ST7789 tft(TFT_CS, TFT_DC, TFT_RST);
+void setup() {
+  tft.init(135, 240, SPI_MODE3); // Width, height, SPI mode
+  tft.setRotation(1); // Adjust orientation
+  tft.fillScreen(ST77XX_BLACK);
+}
 ```
-- **width**: Display width in pixels (135)
-- **height**: Display height in pixels (240)
-- **spiMode** (optional):
-  - `SPI_MODE0` to `SPI_MODE3` (try `SPI_MODE3` if display glitches)
-- **frequency** (optional): SPI clock speed (default 40MHz)
 
-### **Rotation Settings**
+### **SPI Configuration**
 ```cpp
-tft.setRotation(rotation);
+SPI.beginTransaction(SPISettings(
+  40000000, // 40MHz clock
+  MSBFIRST, // Bit order
+  SPI_MODE3 // Clock polarity/phase
+));
 ```
-| Value | Orientation |
-|-------|-------------|
-| 0 | Portrait (0°) |
-| 1 | Landscape (90°) |
-| 2 | Inverse Portrait (180°) |
-| 3 | Inverse Landscape (270°) |
 
-## **2. Core Drawing Functions**
+## **5. Complete Function Reference**
+### **Display Control**
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `init()` | width, height [, mode] | Initialize display |
+| `setRotation()` | 0-3 | Set display orientation |
+| `invertDisplay()` | true/false | Invert colors |
+| `enableDisplay()` | true/false | Turn display on/off |
 
-### **Pixel Manipulation**
+### **Drawing Primitives**
 ```cpp
-// Draw single pixel
+// Pixel operations
 tft.drawPixel(x, y, color);
-
-// Read pixel color (if supported)
 uint16_t color = tft.readPixel(x, y);
-```
 
-### **Shape Drawing**
-```cpp
-// Rectangles
-tft.drawRect(x, y, width, height, color);  // Outline
-tft.fillRect(x, y, width, height, color);  // Filled
-
-// Circles
-tft.drawCircle(x, y, radius, color);      // Outline
-tft.fillCircle(x, y, radius, color);      // Filled
-
-// Triangles
+// Shape drawing (x,y positions in pixels)
+tft.drawLine(x0,y0, x1,y1, color);
+tft.drawRect(x,y, w,h, color);
+tft.fillRect(x,y, w,h, color);
+tft.drawCircle(x,y,r, color);
+tft.fillCircle(x,y,r, color);
 tft.drawTriangle(x1,y1, x2,y2, x3,y3, color);
 ```
 
-### **Text Display**
+### **Text Rendering**
 ```cpp
-tft.setTextColor(color);          // Foreground
-tft.setTextColor(fg, bg);         // Foreground+Background
-tft.setTextSize(scale);           // 1-8 multiplier
-tft.setTextWrap(true/false);      // Auto line-wrap
-tft.setCursor(x, y);              // Position
-tft.print("Hello");               // Print text
-tft.println("World!");            // Print with newline
+// Font control
+tft.setTextSize(n);      // 1-8x scaling
+tft.setTextColor(color); // Foreground
+tft.setTextColor(fg, bg);// With background
+tft.setTextWrap(true);   // Auto newline
+
+// Position cursor and print
+tft.setCursor(x, y);
+tft.print("Hello");
+tft.println(123.45, 2);  // Print float with 2 decimals
 ```
 
-## **3. Color System**
-
-### **Predefined Colors**
+## **6. Practical Example**
+### **Sensor Dashboard**
 ```cpp
-ST77XX_BLACK   ST77XX_WHITE
-ST77XX_RED     ST77XX_GREEN
-ST77XX_BLUE    ST77XX_CYAN
-ST77XX_MAGENTA ST77XX_YELLOW
-```
-
-### **Custom 16-bit Colors**
-```cpp
-// RGB565 format (5-6-5 bits)
-uint16_t myColor = tft.color565(r, g, b);
-// Where: r(0-31), g(0-63), b(0-31)
-```
-
-## **4. Advanced Features**
-
-### **Partial Screen Updates**
-```cpp
-tft.setAddrWindow(x, y, w, h);  // Define area
-tft.pushColor(color, count);    // Fill area
-```
-
-### **Display Control**
-```cpp
-tft.invertDisplay(true);   // Invert colors
-tft.enableDisplay(true);   // Turn on/off
-tft.setBrightness(128);    // PWM control (0-255)
-```
-
-## **5. Performance Optimization**
-
-### **Double Buffering**
-```cpp
-// Create off-screen buffer
-uint16_t buffer[135 * 240];
-tft.startWrite();
-tft.writePixels(buffer, 135*240);
-tft.endWrite();
-```
-
-### **Fast Drawing Tricks**
-```cpp
-tft.startWrite();  // Begin transaction
-// Multiple draw operations...
-tft.endWrite();    // End transaction
-```
-
-## **6. Complete Example Code**
-
-```cpp
-#include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
-#include <SPI.h>
-
 #define TFT_CS   10
 #define TFT_DC   9
 #define TFT_RST  8
@@ -123,104 +121,59 @@ tft.endWrite();    // End transaction
 Adafruit_ST7789 tft(TFT_CS, TFT_DC, TFT_RST);
 
 void setup() {
-  Serial.begin(115200);
-  
-  // Initialize display
-  if (!tft.init(135, 240)) {
-    Serial.println("Display init failed!");
-    while(1);
-  }
-  
+  tft.init(135, 240);
   tft.setRotation(1);
   tft.fillScreen(ST77XX_BLACK);
-  
-  // Display info
-  tft.setTextColor(ST77XX_GREEN);
-  tft.setTextSize(1);
-  tft.setCursor(0, 0);
-  tft.println("ST7789V LCD Demo");
-  
-  // Draw shapes
-  tft.drawRect(10, 30, 50, 30, ST77XX_RED);
-  tft.fillCircle(90, 45, 15, ST77XX_BLUE);
-  
-  // Custom color
-  uint16_t purple = tft.color565(31, 0, 31);
-  tft.fillTriangle(30, 90, 60, 90, 45, 120, purple);
+  analogWrite(3, 128); // 50% backlight
 }
 
 void loop() {
-  // Update sensor data
-  tft.fillRect(0, 130, 135, 30, ST77XX_BLACK);
-  tft.setCursor(10, 140);
-  tft.print("Voltage: ");
-  tft.print(3.3 * analogRead(A0)/1024, 2);
-  tft.print("V");
+  // Read sensors
+  float temp = readTemperature();
+  int humidity = readHumidity();
+  
+  // Update display
+  tft.fillRect(0, 0, 135, 60, ST77XX_BLUE);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(10, 10);
+  tft.print("Temp: "); tft.print(temp); tft.print("C");
+  
+  tft.setCursor(10, 30);
+  tft.print("Humidity: "); tft.print(humidity); tft.print("%");
   
   delay(1000);
 }
 ```
 
-## **7. Input Handling**
+## **7. Troubleshooting Guide**
+| Symptom | Solution |
+|---------|----------|
+| Blank screen | Check RES pulse, verify SPI pins |
+| Flickering | Reduce SPI speed to 30MHz |
+| Wrong colors | Confirm SPI_MODE3, check DC pin |
+| Backlight not working | Test BLK with direct 3.3V connection |
+| Garbled text | Use `tft.setRotation()` to adjust orientation |
 
-### **Button Integration**
+## **8. Advanced Techniques**
+### **Partial Updates**
 ```cpp
-#define BUTTON_PIN 2
-
-void setup() {
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-}
-
-void loop() {
-  if (digitalRead(BUTTON_PIN) == LOW) {
-    tft.fillScreen(ST77XX_RED);
-    tft.setCursor(10, 10);
-    tft.println("Button Pressed!");
-    delay(200);
-  }
+tft.setAddrWindow(x,y,w,h);
+for(int i=0; i<w*h; i++) {
+  tft.writePixel(calculateColor());
 }
 ```
 
-### **Touch Screen (if available)**
+### **Double Buffering**
 ```cpp
-// Requires additional touch library
-#include <XPT2046_Touchscreen.h>
-#define TOUCH_CS 4
-
-XPT2046_Touchscreen ts(TOUCH_CS);
-
-void setup() {
-  ts.begin();
-}
-
-void loop() {
-  if (ts.touched()) {
-    TS_Point p = ts.getPoint();
-    tft.fillCircle(p.x, p.y, 5, ST77XX_WHITE);
-  }
-}
+uint16_t buffer[135*240]; // Full screen buffer
+// Draw to buffer first, then:
+tft.startWrite();
+tft.writePixels(buffer, 135*240);
+tft.endWrite();
 ```
 
-## **8. Power Management**
-
-### **Sleep Mode**
-```cpp
-tft.enableDisplay(false);  // Power saving
-tft.enableDisplay(true);   // Wake up
-```
-
-### **Backlight Control**
-```cpp
-#define BL_PIN 3
-
-void setup() {
-  pinMode(BL_PIN, OUTPUT);
-  analogWrite(BL_PIN, 128); // 50% brightness
-}
-```
-
-This comprehensive tutorial covers all major aspects of working with the ST7789V display. For best results:
-1. Start with basic test code
-2. Gradually add features
-3. Optimize for your specific application
-4. Monitor memory usage on small MCUs
+This complete guide covers all aspects of working with your ST7789V display. For best results:
+1. Start with basic wiring verification
+2. Use the test pattern code
+3. Gradually implement your application features
+4. Optimize performance as needed
